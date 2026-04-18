@@ -24,8 +24,15 @@ final class GameViewModel: ObservableObject {
     /// Positions that were removed in the last move (for animation).
     @Published var lastRemovedPositions: [Position] = []
 
-    /// Path of the last move (for animation).
-    @Published var lastMovePath: [Position]?
+    /// The BFS path to display on the board and animate along.
+    @Published var movePath: [Position]?
+
+    /// Whether a move animation is currently playing (blocks input).
+    @Published private(set) var isAnimating: Bool = false
+
+    /// Callback invoked by the scene when move animation finishes.
+    /// The ViewModel then finalizes the turn (line check, spawn, etc.).
+    var onMoveAnimationComplete: (() -> Void)?
 
     // MARK: - Actions
 
@@ -34,71 +41,71 @@ final class GameViewModel: ObservableObject {
         model = GameModel()
         selectedBall = nil
         lastRemovedPositions = []
-        lastMovePath = nil
+        movePath = nil
+        isAnimating = false
+        onMoveAnimationComplete = nil
         model.prepareNextColors()
         model.spawnBalls()
         model.prepareNextColors()
     }
 
     /// Handles a tap on a grid cell.
-    /// - If no ball is selected and the cell has a ball, select it.
-    /// - If a ball is selected and the cell is empty, try to move.
-    /// - If a ball is selected and another ball is tapped, switch selection.
     func selectCell(_ position: Position) {
-        guard !model.isGameOver else { return }
+        guard !model.isGameOver, !isAnimating else { return }
 
         if let selected = selectedBall {
             if position == selected {
-                // Deselect
                 selectedBall = nil
             } else if model.board[position] != nil {
-                // Switch selection to another ball
                 selectedBall = position
             } else {
-                // Try to move
                 tryMove(from: selected, to: position)
             }
         } else {
-            // Select a ball
             if model.board[position] != nil {
                 selectedBall = position
             }
         }
     }
 
-    // MARK: - Private
-
-    private func tryMove(from: Position, to: Position) {
-        let occupied = Set(model.board.keys).subtracting([from])
-        let path = findPath(from: from, to: to, occupied: occupied)
-
-        guard model.moveBall(from: from, to: to) else { return }
-
-        selectedBall = nil
-        lastMovePath = path
-
+    /// Called by the scene after it finishes animating the move.
+    func finalizeTurn() {
         let removed = model.findAndRemoveLines()
         lastRemovedPositions = removed
 
         if removed.isEmpty {
-            // No line formed — spawn new balls
             model.spawnBalls()
-            // Check if spawned balls form lines
             let spawnRemoved = model.findAndRemoveLines()
             if !spawnRemoved.isEmpty {
                 lastRemovedPositions = spawnRemoved
             }
-            // Prepare next colors for the following turn
             model.prepareNextColors()
 
-            // Check game over after spawn
             if model.board.count == Constants.gridSize * Constants.gridSize {
                 model.isGameOver = true
             }
         } else {
-            // Line was formed — prepare next colors but don't spawn
             model.prepareNextColors()
         }
+
+        movePath = nil
+        isAnimating = false
+    }
+
+    // MARK: - Private
+
+    private func tryMove(from: Position, to: Position) {
+        let occupied = Set(model.board.keys).subtracting([from])
+        guard let path = findPath(from: from, to: to, occupied: occupied) else { return }
+
+        // Publish path for the scene to display and animate
+        selectedBall = nil
+        isAnimating = true
+        movePath = path
+
+        // Move the ball in the model immediately (so board state is correct)
+        model.moveBall(from: from, to: to)
+
+        // The scene will observe `movePath`, animate, then call `finalizeTurn()`
     }
 }
-

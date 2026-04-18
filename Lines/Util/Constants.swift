@@ -27,5 +27,8 @@ enum Constants {
 
     /// Duration (seconds) for a ball removal animation.
     static let removeDuration: Double = 0.3
+
+    /// Duration (seconds) path markers stay visible before move starts.
+    static let pathHighlightDuration: Double = 0.15
 }
 

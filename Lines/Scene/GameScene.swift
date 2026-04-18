@@ -21,6 +21,9 @@ class GameScene: SKScene {
     /// The position of the currently highlighted (selected) ball.
     private var highlightedPosition: Position?
 
+    /// Nodes showing the BFS path on the grid.
+    private var pathMarkerNodes: [SKNode] = []
+
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Scene Lifecycle
@@ -39,6 +42,7 @@ class GameScene: SKScene {
         calculateGrid()
         removeAllChildren()
         ballNodes.removeAll()
+        clearPathMarkers()
         drawGrid()
         syncBoard(animated: false)
     }
@@ -114,6 +118,31 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - Path Markers
+
+    /// Draws small dots on each cell of the BFS path.
+    private func showPathMarkers(for path: [Position]) {
+        clearPathMarkers()
+        let dotRadius = cellSize * 0.08
+        for pos in path {
+            let dot = SKShapeNode(circleOfRadius: dotRadius)
+            dot.fillColor = PlatformColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 0.6)
+            dot.strokeColor = .clear
+            dot.position = pointForPosition(pos)
+            dot.zPosition = 5
+            addChild(dot)
+            pathMarkerNodes.append(dot)
+        }
+    }
+
+    /// Removes all path marker nodes.
+    private func clearPathMarkers() {
+        for node in pathMarkerNodes {
+            node.removeFromParent()
+        }
+        pathMarkerNodes.removeAll()
+    }
+
     // MARK: - ViewModel Observation
 
     private func subscribeToViewModel() {
@@ -122,7 +151,8 @@ class GameScene: SKScene {
         vm.$model
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.syncBoard(animated: true)
+                guard let self, !(self.viewModel?.isAnimating ?? false) else { return }
+                self.syncBoard(animated: true)
             }
             .store(in: &cancellables)
 
@@ -132,6 +162,73 @@ class GameScene: SKScene {
                 self?.updateSelection(selected)
             }
             .store(in: &cancellables)
+
+        vm.$movePath
+            .receive(on: RunLoop.main)
+            .sink { [weak self] path in
+                guard let self else { return }
+                if let path, path.count >= 2 {
+                    self.handleMovePath(path)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Move Path Handling
+
+    /// Shows path markers, then animates the ball along the path.
+    private func handleMovePath(_ path: [Position]) {
+        let source = path.first!
+
+        // Show the path markers
+        showPathMarkers(for: path)
+
+        // Find the ball node at the source (it may still be at the old position visually)
+        guard let node = ballNodes[source] else {
+            // Ball already moved in model — check if it's at the destination
+            if let destNode = ballNodes[path.last!] {
+                // Animate from source to destination
+                destNode.position = pointForPosition(source)
+                animateBallAlongPath(node: destNode, path: path)
+            } else {
+                clearPathMarkers()
+                viewModel?.finalizeTurn()
+            }
+            return
+        }
+
+        animateBallAlongPath(node: node, path: path)
+    }
+
+    /// Animates a ball node step-by-step along the BFS path.
+    private func animateBallAlongPath(node: BallNode, path: [Position]) {
+        let source = path.first!
+        let destination = path.last!
+
+        // Remove from old tracking
+        ballNodes.removeValue(forKey: source)
+        // Also remove from destination if model already placed it there
+        if ballNodes[destination] === node {
+            ballNodes.removeValue(forKey: destination)
+        }
+
+        // Build step-by-step move actions
+        var actions: [SKAction] = []
+        for i in 1..<path.count {
+            let dest = pointForPosition(path[i])
+            actions.append(.move(to: dest, duration: Constants.moveStepDuration))
+        }
+
+        node.run(.sequence(actions)) { [weak self] in
+            guard let self else { return }
+            node.gridPosition = destination
+            self.ballNodes[destination] = node
+            self.clearPathMarkers()
+            // Finalize the turn (line check, spawn, etc.)
+            self.viewModel?.finalizeTurn()
+            // Now sync the board to show removals/spawns
+            self.syncBoard(animated: true)
+        }
     }
 
     // MARK: - Board Sync
@@ -166,13 +263,8 @@ class GameScene: SKScene {
             }
         }
 
-        // Update positions of existing nodes (in case a ball moved)
+        // Ensure color matches for existing nodes
         for (pos, ball) in board {
-            if let node = ballNodes[pos], node.gridPosition != pos {
-                node.gridPosition = pos
-                node.position = pointForPosition(pos)
-            }
-            // Ensure color matches
             if let node = ballNodes[pos], node.ballColor != ball.color {
                 node.removeFromParent()
                 let newNode = BallNode(ball: ball, cellSize: cellSize)
@@ -199,44 +291,14 @@ class GameScene: SKScene {
         }
     }
 
-    // MARK: - Move Animation
-
-    /// Animates a ball node along a BFS path, then calls completion.
-    func animateMove(path: [Position], completion: @escaping () -> Void) {
-        guard path.count >= 2,
-              let node = ballNodes[path.first!] else {
-            completion()
-            return
-        }
-
-        // Remove from old position tracking
-        ballNodes.removeValue(forKey: path.first!)
-
-        var actions: [SKAction] = []
-        for i in 1..<path.count {
-            let dest = pointForPosition(path[i])
-            actions.append(.move(to: dest, duration: Constants.moveStepDuration))
-        }
-
-        node.run(.sequence(actions)) { [weak self] in
-            if let last = path.last {
-                node.gridPosition = last
-                self?.ballNodes[last] = node
-            }
-            completion()
-        }
-    }
-
     // MARK: - Sound Hooks
     //
-    // To add sound effects later, call these from the appropriate animation methods.
-    // Place .caf/.wav/.mp3 files in Lines/Resources/Sounds/ and use:
-    //
+    // To add sound effects later, place .caf/.wav/.mp3 files in Lines/Resources/Sounds/ and use:
     //   run(SKAction.playSoundFileNamed("move.caf", waitForCompletion: false))
     //
     // Hook points:
     //   - Ball selected:  in handleTap(at:) after successful selection
-    //   - Ball moved:     in animateMove(path:completion:) before the sequence runs
+    //   - Ball moved:     in animateBallAlongPath before the sequence runs
     //   - Line removed:   in syncBoard(animated:) when animateRemoval is called
     //   - Balls spawned:  in syncBoard(animated:) when animateAppear is called
     //   - Game over:      in syncBoard(animated:) when vm.isGameOver becomes true
@@ -264,4 +326,3 @@ class GameScene: SKScene {
         viewModel?.selectCell(pos)
     }
 }
-
