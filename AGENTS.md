@@ -36,6 +36,7 @@ Lines/
       HighScoreView.swift      # High score list display
       SettingsView.swift       # Settings screen (sound on/off, etc.)
       AboutView.swift          # About screen (credits, version info)
+      HowToPlayView.swift      # How-to-play instructions for new players
     Scene/
       GameScene.swift          # SpriteKit scene — grid, ball sprites, animations
       BallNode.swift           # SKSpriteNode subclass for a ball
@@ -67,6 +68,7 @@ Lines/
 - Use `Constants` enum (no cases) for magic numbers.
 - Document public APIs with `///` doc comments.
 - Favor simplicity and readability over performance.
+- Follow test-driven development: write tests first, then implement code to pass them.
 
 ## Agent Instructions
 - Read this file first before making any changes.
