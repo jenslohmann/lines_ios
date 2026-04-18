@@ -9,6 +9,7 @@ typealias PlatformColor = NSColor
 #endif
 
 /// SKShapeNode subclass representing a ball on the game board.
+@MainActor
 class BallNode: SKShapeNode {
     /// The ball color this node represents.
     let ballColor: BallColor

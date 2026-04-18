@@ -2,6 +2,8 @@ import SpriteKit
 import Combine
 
 /// SpriteKit scene that renders the 9×9 grid, ball sprites, and animations.
+/// All interactions happen on the main thread (SpriteKit requirement).
+@MainActor
 class GameScene: SKScene {
 
     /// Reference to the view model — set by GameView before presentation.
@@ -224,6 +226,23 @@ class GameScene: SKScene {
             completion()
         }
     }
+
+    // MARK: - Sound Hooks
+    //
+    // To add sound effects later, call these from the appropriate animation methods.
+    // Place .caf/.wav/.mp3 files in Lines/Resources/Sounds/ and use:
+    //
+    //   run(SKAction.playSoundFileNamed("move.caf", waitForCompletion: false))
+    //
+    // Hook points:
+    //   - Ball selected:  in handleTap(at:) after successful selection
+    //   - Ball moved:     in animateMove(path:completion:) before the sequence runs
+    //   - Line removed:   in syncBoard(animated:) when animateRemoval is called
+    //   - Balls spawned:  in syncBoard(animated:) when animateAppear is called
+    //   - Game over:      in syncBoard(animated:) when vm.isGameOver becomes true
+    //
+    // Check @AppStorage("soundEnabled") before playing:
+    //   if UserDefaults.standard.bool(forKey: "soundEnabled") { run(sound) }
 
     // MARK: - Touch Handling
 
