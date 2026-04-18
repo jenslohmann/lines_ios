@@ -66,6 +66,7 @@ Lines/
 - Prefer value types (`struct`, `enum`) for model layer.
 - Use `Constants` enum (no cases) for magic numbers.
 - Document public APIs with `///` doc comments.
+- Favor simplicity and readability over performance.
 
 ## Agent Instructions
 - Read this file first before making any changes.
