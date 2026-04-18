@@ -3,7 +3,6 @@ import SwiftUI
 /// Root view — main menu with navigation to game and other screens.
 struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
-    @State private var isPlaying = false
 
     var body: some View {
         NavigationStack {
@@ -15,9 +14,10 @@ struct ContentView: View {
 
                 Spacer()
 
-                Button("New Game") {
-                    viewModel.newGame()
-                    isPlaying = true
+                NavigationLink("New Game") {
+                    GameView(viewModel: viewModel)
+                        .navigationTitle("Lines")
+                        .onAppear { viewModel.newGame() }
                 }
                 .font(.title2)
 
@@ -42,19 +42,6 @@ struct ContentView: View {
                 .font(.title2)
 
                 Spacer()
-            }
-            .sheet(isPresented: $isPlaying) {
-                NavigationStack {
-                    GameView(viewModel: viewModel)
-                        .navigationTitle("Lines")
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Menu") {
-                                    isPlaying = false
-                                }
-                            }
-                        }
-                }
             }
         }
     }
