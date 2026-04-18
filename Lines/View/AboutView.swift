@@ -20,6 +20,15 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
+            VStack(spacing: 8) {
+                Text("This project is open source.")
+                    .font(.subheadline)
+
+                Link("github.com/jenslohmann/lines_ios",
+                     destination: URL(string: "https://github.com/jenslohmann/lines_ios")!)
+                    .font(.subheadline)
+            }
+
             Spacer()
 
             Text("© 2026 Jens Lohmann")
