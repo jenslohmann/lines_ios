@@ -22,26 +22,22 @@ struct ContentView: View {
                 .font(.title2)
 
                 NavigationLink("High Scores") {
-                    Text("High Scores — coming soon")
-                        .navigationTitle("High Scores")
+                    HighScoreView()
                 }
                 .font(.title2)
 
                 NavigationLink("How to Play") {
-                    Text("How to Play — coming soon")
-                        .navigationTitle("How to Play")
+                    HowToPlayView()
                 }
                 .font(.title2)
 
                 NavigationLink("Settings") {
-                    Text("Settings — coming soon")
-                        .navigationTitle("Settings")
+                    SettingsView()
                 }
                 .font(.title2)
 
                 NavigationLink("About") {
-                    Text("About — coming soon")
-                        .navigationTitle("About")
+                    AboutView()
                 }
                 .font(.title2)
 

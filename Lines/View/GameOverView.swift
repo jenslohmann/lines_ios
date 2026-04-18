@@ -4,6 +4,7 @@ import SwiftUI
 struct GameOverView: View {
     let score: Int
     let onNewGame: () -> Void
+    @State private var isHighScore = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -13,6 +14,12 @@ struct GameOverView: View {
 
             Text("Final Score: \(score)")
                 .font(.title2)
+
+            if isHighScore {
+                Text("🏆 New High Score!")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+            }
 
             Button(action: onNewGame) {
                 Text("New Game")
@@ -28,6 +35,9 @@ struct GameOverView: View {
         .padding(40)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20))
+        .onAppear {
+            isHighScore = HighScoreStore.save(score: score)
+        }
     }
 }
 
