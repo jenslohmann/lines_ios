@@ -1,7 +1,7 @@
 import SwiftUI
+import SpriteKit
 
-/// SwiftUI wrapper hosting the game board and score.
-/// Placeholder grid until SpriteKit scene is added in Phase 4.
+/// SwiftUI wrapper hosting the SpriteKit game scene and score overlay.
 struct GameView: View {
     @ObservedObject var viewModel: GameViewModel
 
@@ -10,59 +10,29 @@ struct GameView: View {
             ScoreView(score: viewModel.score, nextColors: viewModel.nextColors)
                 .padding(.vertical, 8)
 
-            GeometryReader { geometry in
-                let size = min(geometry.size.width, geometry.size.height)
-                let cellSize = size / CGFloat(Constants.gridSize)
-
-                ZStack {
-                    // Grid
-                    gridView(cellSize: cellSize)
-
-                    // Game over overlay
-                    if viewModel.isGameOver {
-                        GameOverView(score: viewModel.score) {
-                            viewModel.newGame()
-                        }
-                    }
+            ZStack {
+                GeometryReader { geometry in
+                    SpriteView(scene: makeScene(size: CGSize(width: geometry.size.width,
+                                                              height: geometry.size.height)))
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .ignoresSafeArea()
                 }
-                .frame(width: size, height: size)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-    }
 
-    private func gridView(cellSize: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            ForEach(0..<Constants.gridSize, id: \.self) { row in
-                HStack(spacing: 0) {
-                    ForEach(0..<Constants.gridSize, id: \.self) { col in
-                        let pos = Position(row: row, col: col)
-                        cellView(at: pos, size: cellSize)
+                // Game over overlay
+                if viewModel.isGameOver {
+                    GameOverView(score: viewModel.score) {
+                        viewModel.newGame()
                     }
                 }
             }
         }
     }
 
-    private func cellView(at position: Position, size: CGFloat) -> some View {
-        ZStack {
-            Rectangle()
-                .fill(Color(white: 0.9))
-                .border(Color(white: 0.7), width: 0.5)
-
-            if let ball = viewModel.board[position] {
-                Circle()
-                    .fill(ball.color.swiftUIColor)
-                    .padding(size * 0.1)
-                    .scaleEffect(viewModel.selectedBall == position ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true),
-                               value: viewModel.selectedBall == position)
-            }
-        }
-        .frame(width: size, height: size)
-        .onTapGesture {
-            viewModel.selectCell(position)
-        }
+    private func makeScene(size: CGSize) -> GameScene {
+        let scene = GameScene(size: size)
+        scene.scaleMode = .resizeFill
+        scene.viewModel = viewModel
+        return scene
     }
 }
 
