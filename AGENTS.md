@@ -7,7 +7,11 @@
 - **Language:** Swift 6
 - **UI Framework:** SwiftUI (menus, score, overlays)
 - **Game Engine:** SpriteKit (game board rendering and animations)
-- **Platform:** iOS 17+, iPhone only
+- **Platform:** iOS 17+, iPhone and iPad (native, universal app)
+- **Localization:** Danish (da), English (en), French (fr), Japanese (ja) — using String Catalogs (`.xcstrings`)
+- **Networking:** Fully offline — no network access required.
+- **Sound:** No sound effects initially; architecture supports adding `SKAction.playSoundFileNamed` later.
+- **Persistence:** High scores and user preferences (e.g. sound on/off) stored locally via `UserDefaults` or SwiftData.
 - **Build System:** Xcode / Swift Package Manager
 - **Architecture:** MVVM — `GameViewModel` owns a `GameModel` and exposes state to SwiftUI; SpriteKit scene reads from the view-model.
 
@@ -29,6 +33,9 @@ Lines/
       GameView.swift           # SwiftUI wrapper hosting the SpriteKit scene
       ScoreView.swift          # Score & next-balls preview
       GameOverView.swift       # Game-over overlay
+      HighScoreView.swift      # High score list display
+      SettingsView.swift       # Settings screen (sound on/off, etc.)
+      AboutView.swift          # About screen (credits, version info)
     Scene/
       GameScene.swift          # SpriteKit scene — grid, ball sprites, animations
       BallNode.swift           # SKSpriteNode subclass for a ball
@@ -37,6 +44,8 @@ Lines/
       Constants.swift          # Grid size, colors, counts, animation durations
     Resources/
       Assets.xcassets          # App icon & color assets
+      Localizable.xcstrings    # String Catalog for all localizations
+      Sounds/                  # Sound effect files (empty initially)
   Lines.xcodeproj              # Xcode project (or Package.swift)
 ```
 
@@ -49,6 +58,7 @@ Lines/
 6. **Score:** 10 points for 5 balls, +10 for each additional ball in the line.
 7. Before each turn the player can see which **3 colors** will appear next.
 8. The game ends when there are no empty cells left to place new balls.
+9. A **high score** list (top 10) is maintained locally, showing score and date.
 
 ## Coding Conventions
 - Use Swift strict concurrency (`Sendable`, `@MainActor` where appropriate).
